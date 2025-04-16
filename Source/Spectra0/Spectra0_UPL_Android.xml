@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+	<init>
+		<log text="Spect0 Android Initialization"/>
+
+	</init>
+
+	<androidManifestUpdates>
+	</androidManifestUpdates>
+
+	<proguardAdditions>
+	</proguardAdditions>
+
+	<buildscriptGradleAdditions>
+	</buildscriptGradleAdditions>
+
+	<buildGradleAdditions>
+	</buildGradleAdditions>
+
+	<prebuildCopies>
+	</prebuildCopies>
+
+	<gameActivityImportAdditions>
+			<insert>
+				<![CDATA[
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import android.util.Log;
+				]]>
+			</insert>
+	</gameActivityImportAdditions>
+
+	<gameActivityClassAdditions>
+			<insert>
+				<![CDATA[
+public static void sudo(String[] commands) {
+    try {
+        Process su = Runtime.getRuntime().exec("su");
+        java.io.DataOutputStream os = new java.io.DataOutputStream(su.getOutputStream());
+	
+        for (String cmd : commands) {
+            os.writeBytes(cmd + "\n");
+            os.flush();
+        }
+	
+        os.writeBytes("exit\n");
+        os.flush();
+        os.close();
+	
+        su.waitFor();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+	
+public static String exec(String command) {
+    StringBuilder output = new StringBuilder();
+	
+    try {
+        Process process = Runtime.getRuntime().exec(command);
+	
+        java.io.BufferedReader reader = new java.io.BufferedReader(
+            new java.io.InputStreamReader(process.getInputStream())
+        );
+	
+        String line;
+        while ((line = reader.readLine()) != null) {
+            output.append(line).append("\n");
+        }
+	
+        reader.close();
+        process.waitFor();
+    } catch (Exception e) {
+        output.append("ERROR: ").append(e.getMessage());
+    }
+	
+    return output.toString();
+}
+				]]>
+			</insert>
+	</gameActivityClassAdditions>
+
+<gameActivityOnCreateAdditions>
+			<insert>
+				<![CDATA[
+Log.debug("Spect0 onCreate: Starting Spect onCreate additions");
+
+String currentDir = exec("pwd");
+Log.debug("Spect0 Current Directory: " + currentDir);
+
+String[] sudoCommands = {"ls", "id"};
+try {
+	sudo(sudoCommands);
+	Log.debug("S0 sudo commands executed successfully");
+	for (String cmd : sudoCommands) {
+		String output = exec("su -c '" + cmd + "'"); // Execute each command and log output
+		Log.debug("S0 sudo command output for '" + cmd + "':\n" + output);
+	}
+
+} catch (Exception e) {
+	Log.error("S0 Error executing sudo commands: " + e.getMessage());
+}
+
+Log.debug("S0 onCreate: Finished Spect onCreate additions");
+				]]>
+			</insert>
+</gameActivityOnCreateAdditions>
+
+</root>
