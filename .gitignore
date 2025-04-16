@@ -11,6 +11,5 @@ Saved
 *.sln
 *.suo
 *.xcodeproj
-*.xcworkspace
-/Build
-/Android_ASTC
+*.xcworkspace 
+Config/DefaultEngine.ini
