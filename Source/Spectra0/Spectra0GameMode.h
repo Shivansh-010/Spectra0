@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "ExecutionManager.h"
 #include "Spectra0GameMode.generated.h"
 
 /**
@@ -16,4 +17,8 @@ class SPECTRA0_API ASpectra0GameMode : public AGameModeBase
 	
 private:
 	virtual void BeginPlay() override;
+	
+	UPROPERTY()
+	UExecutionManager* ExecutionManager;
+
 };

@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Terminal.generated.h"
 
+class UQueryStepperModel;
+
 UCLASS()
 class SPECTRA0_API ATerminal : public AActor
 {
@@ -43,5 +45,10 @@ private:
 
 	// Command History
 	TArray<FString> CommandHistory;
+
+	// Models
+	UPROPERTY()
+	UQueryStepperModel* QueryStepperModel;
+
 };
 

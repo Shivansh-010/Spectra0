@@ -1,4 +1,5 @@
 #include "Terminal.h"
+#include "QueryStepperModel.h"
 
 #if PLATFORM_ANDROID
 #include "Android/AndroidApplication.h"
@@ -14,25 +15,41 @@ ATerminal::ATerminal()
 }
 
 // Called when the game starts or when spawned
+// void ATerminal::BeginPlay()
+// {
+//     Super::BeginPlay();
+// 
+// #if PLATFORM_ANDROID
+//     SetRootAccessEnabled(true);
+// 
+//     // Run "pwd"
+//     {
+//         TArray<FString> Cmds = { TEXT("pwd") };
+//         ExecuteRootCommand(Cmds);
+//     }
+// 
+//     // Run "ls"
+//     {
+//         TArray<FString> Cmds = { TEXT("ls") };
+//         ExecuteRootCommand(Cmds);
+//     }
+// #endif
+// }
+
 void ATerminal::BeginPlay()
 {
     Super::BeginPlay();
 
 #if PLATFORM_ANDROID
     SetRootAccessEnabled(true);
-
-    // Run "pwd"
-    {
-        TArray<FString> Cmds = { TEXT("pwd") };
-        ExecuteRootCommand(Cmds);
-    }
-
-    // Run "ls"
-    {
-        TArray<FString> Cmds = { TEXT("ls") };
-        ExecuteRootCommand(Cmds);
-    }
 #endif
+    // Create and initialize the model
+    QueryStepperModel = NewObject<UQueryStepperModel>(this);
+    if (QueryStepperModel)
+    {
+        QueryStepperModel->Initialize(); // uses default API key and model ID
+        UE_LOG(LogTemp, Log, TEXT("Query Stepper Model Initialized"));
+    }
 }
 
 // Called every frame
