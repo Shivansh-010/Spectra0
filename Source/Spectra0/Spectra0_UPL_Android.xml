@@ -34,24 +34,47 @@ import android.util.Log;
 	<gameActivityClassAdditions>
 			<insert>
 				<![CDATA[
-public static void sudo(String[] commands) {
+public static String[] sudo(String[] commands) {
+    StringBuilder stdout = new StringBuilder();
+    StringBuilder stderr = new StringBuilder();
+    String[] output = new String[2]; // To return stdout and stderr
+
     try {
         Process su = Runtime.getRuntime().exec("su");
         java.io.DataOutputStream os = new java.io.DataOutputStream(su.getOutputStream());
-	
+        java.io.BufferedReader stdoutReader = new java.io.BufferedReader(new java.io.InputStreamReader(su.getInputStream()));
+        java.io.BufferedReader stderrReader = new java.io.BufferedReader(new java.io.InputStreamReader(su.getErrorStream()));
+
         for (String cmd : commands) {
             os.writeBytes(cmd + "\n");
             os.flush();
         }
-	
+
         os.writeBytes("exit\n");
         os.flush();
         os.close();
-	
+
+        String line;
+        while ((line = stdoutReader.readLine()) != null) {
+            stdout.append(line).append("\n");
+        }
+        stdoutReader.close();
+
+        while ((line = stderrReader.readLine()) != null) {
+            stderr.append(line).append("\n");
+        }
+        stderrReader.close();
+
         su.waitFor();
+
     } catch (Exception e) {
+        stderr.append("ERROR: ").append(e.getMessage()); // Capture exception message in stderr
         e.printStackTrace();
     }
+
+    output[0] = stdout.toString();
+    output[1] = stderr.toString();
+    return output;
 }
 	
 public static String exec(String command) {
@@ -84,25 +107,25 @@ public static String exec(String command) {
 <gameActivityOnCreateAdditions>
 			<insert>
 				<![CDATA[
-Log.debug("Spect0 onCreate: Starting Spect onCreate additions");
-
-String currentDir = exec("pwd");
-Log.debug("Spect0 Current Directory: " + currentDir);
-
-String[] sudoCommands = {"ls", "id"};
-try {
-	sudo(sudoCommands);
-	Log.debug("S0 sudo commands executed successfully");
-	for (String cmd : sudoCommands) {
-		String output = exec("su -c '" + cmd + "'"); // Execute each command and log output
-		Log.debug("S0 sudo command output for '" + cmd + "':\n" + output);
-	}
-
-} catch (Exception e) {
-	Log.error("S0 Error executing sudo commands: " + e.getMessage());
-}
-
-Log.debug("S0 onCreate: Finished Spect onCreate additions");
+// Log.debug("Spect0 onCreate: Starting Spect onCreate additions");
+// 
+// String currentDir = exec("pwd");
+// Log.debug("Spect0 Current Directory: " + currentDir);
+// 
+// String[] sudoCommands = {"ls", "id"};
+// try {
+// 	sudo(sudoCommands);
+// 	Log.debug("S0 sudo commands executed successfully");
+// 	for (String cmd : sudoCommands) {
+// 		String output = exec("su -c '" + cmd + "'"); // Execute each command and log output
+// 		Log.debug("S0 sudo command output for '" + cmd + "':\n" + output);
+// 	}
+// 
+// } catch (Exception e) {
+// 	Log.error("S0 Error executing sudo commands: " + e.getMessage());
+// }
+// 
+// Log.debug("S0 onCreate: Finished Spect onCreate additions");
 				]]>
 			</insert>
 </gameActivityOnCreateAdditions>
