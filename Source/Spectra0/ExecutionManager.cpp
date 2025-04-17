@@ -57,9 +57,14 @@ void UExecutionManager::Initialize(UWorld* WorldContext)
 	{
 		Verifier->OnResponseReceived.AddDynamic(this, &UExecutionManager::OnModelResponse);
 	}
-
-	// Load model settings (API key, context, etc.)
-	ConfigureModelsFromFile("D:/Obsidian_live/_KnowledgeBase/DataFiles/ModelConfig.md");
+    
+#if PLATFORM_WINDOWS
+    ConfigureModelsFromFile(TEXT("D:/Obsidian_live/_KnowledgeBase/DataFiles/ModelConfig.md"));
+#elif PLATFORM_ANDROID
+    ConfigureModelsFromFile(TEXT("/storage/emulated/0/Documents/Obsidian_Live/_KnowledgeBase/DataFiles/ModelConfigAndroid.md"));
+#else
+    ConfigureModelsFromFile(TEXT("D:/Obsidian_live/_KnowledgeBase/DataFiles/ModelConfig.md"));
+#endif
 
 	LastRespondingModel = Stepper;
 }
