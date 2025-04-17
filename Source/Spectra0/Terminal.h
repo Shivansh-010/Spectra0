@@ -46,9 +46,7 @@ private:
 	// Command History
 	TArray<FString> CommandHistory;
 
-	// Models
-	UPROPERTY()
-	UQueryStepperModel* QueryStepperModel;
-
+public:
+	bool GetRelayEnabled() const;
 };
 

@@ -41,6 +41,8 @@ void UAIModel::Initialize(const FString& InApiKey, const FString& InModelID)
 
 void UAIModel::SendMessage(const FString& UserInput)
 {
+    UE_LOG(LogTemp, Log, TEXT("→ Sending to model [%s] (%s): %s"), *GetClass()->GetName(), *ModelID, *UserInput);
+
     ConversationHistory.Add({ TEXT("user"), UserInput });
 
     FString Payload = BuildRequestPayload(UserInput);
@@ -162,7 +164,6 @@ FString UAIModel::ExtractCleanResponseText(const FString& JsonString) const
         : CollectedText;
 }
 
-
 FString UAIModel::BuildRequestPayload(const FString& InputText) const
 {
     TSharedRef<FJsonObject> Root = MakeShared<FJsonObject>();
@@ -232,8 +233,7 @@ void UAIModel::HandleHttpResponse(FHttpRequestPtr Request, FHttpResponsePtr Resp
         // Add clean text to history
         ConversationHistory.Add({ TEXT("model"), CleanText });
 
-        // Log clean response
-        UE_LOG(LogTemp, Log, TEXT("Model Clean Response:\n%s"), *CleanText);
+        UE_LOG(LogTemp, Log, TEXT("← Response from model [%s] (%s): %s"), *GetClass()->GetName(), *ModelID, *CleanText);
 
         // Broadcast clean response
         OnResponseReceived.Broadcast(CleanText);
@@ -244,4 +244,5 @@ void UAIModel::HandleHttpResponse(FHttpRequestPtr Request, FHttpResponsePtr Resp
         UE_LOG(LogTemp, Error, TEXT("HTTP Request failed: %s"), *Error);
     }
 }
+
 

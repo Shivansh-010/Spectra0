@@ -12,6 +12,17 @@ ATerminal::ATerminal()
     PrimaryActorTick.bCanEverTick = true;
     bUseRoot = false;
     bRelayEnabled = false;
+    
+    // Run "pwd"
+    {
+        FString Cmds = { TEXT("pwd") };
+        ExecuteCommand(Cmds);
+    }
+    // Run "ls"
+    {
+        FString Cmds = { TEXT("ls") };
+        ExecuteCommand(Cmds);
+    }
 }
 
 // Called when the game starts or when spawned
@@ -41,15 +52,8 @@ void ATerminal::BeginPlay()
     Super::BeginPlay();
 
 #if PLATFORM_ANDROID
-    SetRootAccessEnabled(true);
+    // SetRootAccessEnabled(true);
 #endif
-    // Create and initialize the model
-    QueryStepperModel = NewObject<UQueryStepperModel>(this);
-    if (QueryStepperModel)
-    {
-        QueryStepperModel->Initialize(); // uses default API key and model ID
-        UE_LOG(LogTemp, Log, TEXT("Query Stepper Model Initialized"));
-    }
 }
 
 // Called every frame
@@ -69,6 +73,7 @@ void ATerminal::ExecuteCommand(const FString& Command)
     }
 
 #if PLATFORM_ANDROID
+    // — Android implementation (as before) —
     JNIEnv* Env = FAndroidApplication::GetJavaEnv();
     jstring JCmd = Env->NewStringUTF(TCHAR_TO_UTF8(*Command));
 
@@ -78,10 +83,7 @@ void ATerminal::ExecuteCommand(const FString& Command)
         UE_LOG(LogTemp, Error, TEXT("Java class not found: GameActivity"));
         return;
     }
-    else
-    {
-        UE_LOG(LogTemp, Log, TEXT("Java class found: GameActivity"));
-    }
+    UE_LOG(LogTemp, Log, TEXT("Java class found: GameActivity"));
 
     jmethodID ExecMethod = Env->GetStaticMethodID(JavaClass, "exec", "(Ljava/lang/String;)Ljava/lang/String;");
     if (!ExecMethod)
@@ -89,39 +91,86 @@ void ATerminal::ExecuteCommand(const FString& Command)
         UE_LOG(LogTemp, Error, TEXT("Static method not found: exec"));
         return;
     }
-    else
-    {
-        UE_LOG(LogTemp, Log, TEXT("Static method found: exec"));
-    }
+    UE_LOG(LogTemp, Log, TEXT("Static method found: exec"));
 
     jstring Result = (jstring)Env->CallStaticObjectMethod(JavaClass, ExecMethod, JCmd);
     const char* UTFChars = Env->GetStringUTFChars(Result, 0);
     FString Output = FString(UTF8_TO_TCHAR(UTFChars));
-    Env->ReleaseStringUTFChars(Result, UTFChars);
 
+    Env->ReleaseStringUTFChars(Result, UTFChars);
     Env->DeleteLocalRef(JCmd);
     Env->DeleteLocalRef(Result);
 
     CommandHistory.Add(Command);
-    UE_LOG(LogTemp, Log, TEXT("Command Output:\n%s"), *Output);
+    UE_LOG(LogTemp, Log, TEXT("Android Command Output:\n%s"), *Output);
+
+#elif PLATFORM_WINDOWS
+    // — Windows implementation —
+    // Create pipes for capturing stdout/stderr
+    void* ReadPipe = nullptr;
+    void* WritePipe = nullptr;
+    FPlatformProcess::CreatePipe(ReadPipe, WritePipe);
+
+    // Launch the process (cmd.exe /C <command>)
+    FString CmdExe = TEXT("cmd.exe");
+    FString CmdArgs = FString::Printf(TEXT("/C %s"), *Command);
+    FProcHandle ProcHandle = FPlatformProcess::CreateProc(
+        *CmdExe,
+        *CmdArgs,
+        /*bLaunchDetached=*/ false,
+        /*bLaunchHidden=*/ true,
+        /*bLaunchReallyHidden=*/ true,
+        /*OutProcessID=*/ nullptr,
+        /*Priority=*/ 0,
+        /*OptionalWorkingDirectory=*/ nullptr,
+        /*PipeWrite=*/ WritePipe,
+        /*PipeRead=*/ nullptr
+    );
+
+    if (!ProcHandle.IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to launch Windows command"));
+    }
+    else
+    {
+        // Read until the process exits
+        FString Output;
+        while (FPlatformProcess::IsProcRunning(ProcHandle))
+        {
+            FString NewData = FPlatformProcess::ReadPipe(ReadPipe);
+            if (!NewData.IsEmpty())
+            {
+                Output += NewData;
+            }
+            FPlatformProcess::Sleep(0.01f);
+        }
+        // Read any remaining data
+        Output += FPlatformProcess::ReadPipe(ReadPipe);
+
+        // Close handles
+        FPlatformProcess::ClosePipe(ReadPipe, WritePipe);
+        FPlatformProcess::CloseProc(ProcHandle);
+
+        CommandHistory.Add(Command);
+        UE_LOG(LogTemp, Log, TEXT("Windows Command Output:\n%s"), *Output);
+    }
+#else
+    UE_LOG(LogTemp, Warning, TEXT("ExecuteCommand not supported on this platform"));
 #endif
 }
 
 void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
 {
 #if PLATFORM_ANDROID
+    // — Android root implementation (as before) —
     JNIEnv* Env = FAndroidApplication::GetJavaEnv();
-
     jclass JavaClass = FAndroidApplication::FindJavaClass("com/epicgames/unreal/GameActivity");
     if (!JavaClass)
     {
         UE_LOG(LogTemp, Error, TEXT("Java class not found: GameActivity"));
         return;
     }
-    else
-    {
-        UE_LOG(LogTemp, Log, TEXT("Java class found: GameActivity"));
-    }
+    UE_LOG(LogTemp, Log, TEXT("Java class found: GameActivity"));
 
     jmethodID SudoMethod = Env->GetStaticMethodID(JavaClass, "sudo", "([Ljava/lang/String;)[Ljava/lang/String;");
     if (!SudoMethod)
@@ -129,10 +178,7 @@ void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
         UE_LOG(LogTemp, Error, TEXT("Static method not found: sudo"));
         return;
     }
-    else
-    {
-        UE_LOG(LogTemp, Log, TEXT("Static method found: sudo"));
-    }
+    UE_LOG(LogTemp, Log, TEXT("Static method found: sudo"));
 
     jobjectArray JCmdArray = Env->NewObjectArray(Commands.Num(), Env->FindClass("java/lang/String"), nullptr);
     for (int i = 0; i < Commands.Num(); ++i)
@@ -171,9 +217,19 @@ void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
     {
         CommandHistory.Add(Cmd);
     }
+
+#elif PLATFORM_WINDOWS
+    // — Windows root (administrator) implementation —
+    // On Windows, elevating a process to admin requires a separate launcher or manifest.
+    // Here we'll just execute commands as-is, assuming your game runs elevated.
+    for (const FString& Cmd : Commands)
+    {
+        ExecuteCommand(Cmd);
+    }
+#else
+    UE_LOG(LogTemp, Warning, TEXT("ExecuteRootCommand not supported on this platform"));
 #endif
 }
-
 
 void ATerminal::SetRelayEnabled(bool bEnabled)
 {
@@ -185,4 +241,9 @@ void ATerminal::SetRootAccessEnabled(bool bEnabled)
 {
     bUseRoot = bEnabled;
     UE_LOG(LogTemp, Log, TEXT("Root Access %s"), bEnabled ? TEXT("Enabled") : TEXT("Disabled"));
+}
+
+bool ATerminal::GetRelayEnabled() const
+{
+    return bRelayEnabled;
 }

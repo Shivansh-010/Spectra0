@@ -8,10 +8,10 @@
 class ATerminal;
 class UQueryStepperModel;
 class UAIModel;
-// class UTaggerModel;
-// class UCommandGeneratorModel;
-// class UCommandConsolidatorModel;
-// class UCommandVerifierModel;
+class UTaggerModel;
+class UCommandGeneratorModel;
+class UCommandConsolidatorModel;
+class UCommandVerifierModel;
 
 UCLASS(Blueprintable)
 class SPECTRA0_API UExecutionManager : public UObject
@@ -27,6 +27,11 @@ public:
 	UFUNCTION()
 	void OnModelResponse(const FString& Response);
 
+	UFUNCTION(BlueprintCallable, Category = "AI Pipeline")
+	void SendPromptToPipeline(const FString& Prompt, bool bRootAllowed);
+
+	bool bRequestedRoot = false;
+
 private:
 	UPROPERTY()
 	ATerminal* Terminal;
@@ -34,9 +39,14 @@ private:
 	UPROPERTY()
 	UQueryStepperModel* Stepper;
 
-	// Future use:
-	// UPROPERTY() UTaggerModel* Tagger;
-	// UPROPERTY() UCommandGeneratorModel* Generator;
-	// UPROPERTY() UCommandConsolidatorModel* Consolidator;
-	// UPROPERTY() UCommandVerifierModel* Verifier;
+	void ConfigureModelsFromFile(const FString& ConfigPath);
+	
+	// Add to private section
+	UAIModel* LastRespondingModel = nullptr;
+
+	UPROPERTY() UTaggerModel* Tagger;
+	UPROPERTY() UCommandGeneratorModel* Generator;
+	UPROPERTY() UCommandConsolidatorModel* Consolidator;
+	UPROPERTY() UCommandVerifierModel* Verifier;
+	
 };
