@@ -8,6 +8,18 @@
 
 class UQueryStepperModel;
 
+USTRUCT(BlueprintType)
+struct FCommandResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Terminal")
+	FString Command;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Terminal")
+	FString Output;
+};
+
 UCLASS()
 class SPECTRA0_API ATerminal : public AActor
 {
@@ -38,15 +50,21 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Terminal")
 	void SetRootAccessEnabled(bool bEnabled);
-
+	
+	UFUNCTION(BlueprintPure, BlueprintCallable, Category = "Terminal") // Added function declaration
+	FString GetTerminalText() const;
 private:
 	bool bUseRoot;
 	bool bRelayEnabled;
 
-	// Command History
-	TArray<FString> CommandHistory;
+protected:
+	UPROPERTY(BlueprintReadOnly, Category = "Terminal")
+	TArray<FCommandResult> CommandHistory;
 
 public:
 	bool GetRelayEnabled() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Terminal")
+	TArray<FCommandResult> GetCommandHistory() const;
 };
 

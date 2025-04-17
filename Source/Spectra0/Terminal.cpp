@@ -12,41 +12,9 @@ ATerminal::ATerminal()
     PrimaryActorTick.bCanEverTick = true;
     bUseRoot = false;
     bRelayEnabled = false;
-    
-    // Run "pwd"
-    {
-        FString Cmds = { TEXT("pwd") };
-        ExecuteCommand(Cmds);
-    }
-    // Run "ls"
-    {
-        FString Cmds = { TEXT("ls") };
-        ExecuteCommand(Cmds);
-    }
 }
 
 // Called when the game starts or when spawned
-// void ATerminal::BeginPlay()
-// {
-//     Super::BeginPlay();
-// 
-// #if PLATFORM_ANDROID
-//     SetRootAccessEnabled(true);
-// 
-//     // Run "pwd"
-//     {
-//         TArray<FString> Cmds = { TEXT("pwd") };
-//         ExecuteRootCommand(Cmds);
-//     }
-// 
-//     // Run "ls"
-//     {
-//         TArray<FString> Cmds = { TEXT("ls") };
-//         ExecuteRootCommand(Cmds);
-//     }
-// #endif
-// }
-
 void ATerminal::BeginPlay()
 {
     Super::BeginPlay();
@@ -101,7 +69,12 @@ void ATerminal::ExecuteCommand(const FString& Command)
     Env->DeleteLocalRef(JCmd);
     Env->DeleteLocalRef(Result);
 
-    CommandHistory.Add(Command);
+    // Create FCommandResult and add to history
+    FCommandResult CommandResultEntry;
+    CommandResultEntry.Command = Command;
+    CommandResultEntry.Output = Output;
+    CommandHistory.Add(CommandResultEntry);
+
     UE_LOG(LogTemp, Log, TEXT("Android Command Output:\n%s"), *Output);
 
 #elif PLATFORM_WINDOWS
@@ -151,7 +124,12 @@ void ATerminal::ExecuteCommand(const FString& Command)
         FPlatformProcess::ClosePipe(ReadPipe, WritePipe);
         FPlatformProcess::CloseProc(ProcHandle);
 
-        CommandHistory.Add(Command);
+        // Create FCommandResult and add to history
+        FCommandResult CommandResultEntry;
+        CommandResultEntry.Command = Command;
+        CommandResultEntry.Output = Output;
+        CommandHistory.Add(CommandResultEntry);
+
         UE_LOG(LogTemp, Log, TEXT("Windows Command Output:\n%s"), *Output);
     }
 #else
@@ -191,6 +169,7 @@ void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
     jobjectArray ResultArray = (jobjectArray)Env->CallStaticObjectMethod(JavaClass, SudoMethod, JCmdArray);
     Env->DeleteLocalRef(JCmdArray);
 
+    FString CombinedOutput; // To store both STDOUT and STDERR
     if (ResultArray != nullptr)
     {
         for (int i = 0; i < 2; ++i)
@@ -206,6 +185,7 @@ void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
             {
                 GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor::Green, FString::Printf(TEXT("Root [%s]:\n%s"), *Tag, *Out));
             }
+            CombinedOutput += FString::Printf(TEXT("[%s]:\n%s\n"), *Tag, *Out); // Append to combined output
 
             Env->ReleaseStringUTFChars(JOutStr, UTFChars);
             Env->DeleteLocalRef(JOutStr);
@@ -215,7 +195,11 @@ void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
 
     for (const FString& Cmd : Commands)
     {
-        CommandHistory.Add(Cmd);
+        // Create FCommandResult and add to history (using combined output for all commands in the array)
+        FCommandResult CommandResultEntry;
+        CommandResultEntry.Command = Cmd; // Assuming you want to store each command individually
+        CommandResultEntry.Output = CombinedOutput; // You might want to refine this if you need separate output per command in the array
+        CommandHistory.Add(CommandResultEntry);
     }
 
 #elif PLATFORM_WINDOWS
@@ -224,7 +208,7 @@ void ATerminal::ExecuteRootCommand(const TArray<FString>& Commands)
     // Here we'll just execute commands as-is, assuming your game runs elevated.
     for (const FString& Cmd : Commands)
     {
-        ExecuteCommand(Cmd);
+        ExecuteCommand(Cmd); // ExecuteCommand will now handle FCommandResult creation for Windows too
     }
 #else
     UE_LOG(LogTemp, Warning, TEXT("ExecuteRootCommand not supported on this platform"));
@@ -246,4 +230,21 @@ void ATerminal::SetRootAccessEnabled(bool bEnabled)
 bool ATerminal::GetRelayEnabled() const
 {
     return bRelayEnabled;
+}
+
+TArray<FCommandResult> ATerminal::GetCommandHistory() const
+{
+    return CommandHistory;
+}
+
+FString ATerminal::GetTerminalText() const
+{
+    FString TerminalOutput = "";
+    for (const FCommandResult& Result : CommandHistory)
+    {
+        TerminalOutput += "> " + Result.Command + "\n";
+        TerminalOutput += Result.Output + "\n";
+        TerminalOutput += "---\n"; // Separator between commands
+    }
+    return TerminalOutput;
 }

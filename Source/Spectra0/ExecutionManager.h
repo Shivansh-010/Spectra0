@@ -34,10 +34,11 @@ public:
 
 	UPROPERTY(BlueprintReadWrite)
 	FString CleanJson;
-	
-private:
-	UPROPERTY()
+
+	UPROPERTY(BlueprintReadWrite)
 	ATerminal* Terminal;
+
+private:
 
 	UPROPERTY()
 	UQueryStepperModel* Stepper;
