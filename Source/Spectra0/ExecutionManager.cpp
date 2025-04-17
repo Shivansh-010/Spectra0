@@ -214,7 +214,7 @@ void UExecutionManager::OnModelResponse(const FString& Response)
 {
     // UE_LOG(LogTemp, Log, TEXT("Model Response Received: %s"), *Response);
 
-    const FString CleanJson = ExtractJsonCodeBlock(Response);
+    CleanJson = ExtractJsonCodeBlock(Response);
 
     if (LastRespondingModel == Stepper)
     {

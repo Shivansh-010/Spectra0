@@ -32,13 +32,16 @@ public:
 
 	bool bRequestedRoot = false;
 
+	UPROPERTY(BlueprintReadWrite)
+	FString CleanJson;
+	
 private:
 	UPROPERTY()
 	ATerminal* Terminal;
 
 	UPROPERTY()
 	UQueryStepperModel* Stepper;
-
+	
 	void ConfigureModelsFromFile(const FString& ConfigPath);
 	
 	// Add to private section

@@ -15,10 +15,10 @@ class SPECTRA0_API ASpectra0GameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 	
-private:
 	virtual void BeginPlay() override;
-	
-	UPROPERTY()
+
+public:	
+	UPROPERTY(BlueprintReadWrite)
 	UExecutionManager* ExecutionManager;
 
 };
